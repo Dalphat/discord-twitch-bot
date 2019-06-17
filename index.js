@@ -10,6 +10,7 @@ const client = new Discord.Client();//Create an instance of a Discord Client.
 
 var stop = [];
 var respond = new Map();
+var channel = 'bot-channel';//Change this to join different channels in the server.
 
 //Populate Prohibited words from 'stop.txt'
 fs.readFile('stop.txt', (err, data) => {
@@ -18,7 +19,7 @@ fs.readFile('stop.txt', (err, data) => {
     console.log("Reading 'stop.txt'");
     let lines = data.toString().split('\n');
     for(let i = 0; i < lines.length; ++i){
-        lines[i] = lines[i].replace('\n','');
+        lines[i] = lines[i].replace(/[\n\r]/g,'');
         if(lines[i].length > 0){
             stop.push(lines[i]);
             console.log(lines[i]);
@@ -32,7 +33,7 @@ fs.readFile('respond.txt', (err,data) => {
     console.log("Reading 'respond.txt'");
     let lines = data.toString().split('\n');
     for(let i = 0; i < lines.length; ++i){
-        lines[i] = lines[i].replace('\n','');
+        lines[i] = lines[i].replace(/[\n\r]/g,'');
         let index = lines[i].indexOf(' ');
         if(index > 0){
             lines[i] = lines[i].replace(' ','');
@@ -56,10 +57,12 @@ client.on('ready', () => {
 });
 //Discord Listner:
 client.on('message', msg => {
-    if(msg.channel.name === 'bot-channel'){
+    if(msg.channel.name === channel){
+        console.log(msg);
         //Check if PROHIBITED words were used:
         for(let i = 0; i < stop.length; ++i){
             if(msg.content.includes(stop[i])){
+                //TODO: EDIT post instead of deleting it.
                 msg.delete();//Delete the message immediately.
                 msg.reply("Nope, not going to happen!");
                 return;
@@ -70,7 +73,7 @@ client.on('message', msg => {
         if(react.has(arr[0])){
             switch(arr.length){
                 case 2:
-                    react.get(arr[0])(msg,arr[1]);
+                    react.get(arr[0])(msg,arr[1],null);
                     break;
                 case 3:
                     react.get(arr[0])(msg,arr[1],arr[2]);
@@ -90,13 +93,16 @@ var commands = [
 ];
 //Actions Array:
 var actions = [
-    (msg,count)=>{
+    (msg,count,user)=>{
         msg.channel.fetchMessages({limit:++count})
         .then(msgs => {
-            console.log(`Purged ${msgs.size-1} messages`);
+            console.log(`Purged ${msgs.size} messages`);
+            if(user)
+                msgs = msgs.filter( e => e.author);
+            console.log(`Purged ${msgs.size} messages`);
             for(let i = 0; i < msgs.size; ++i)
                 (async () => {
-                    await msgs.array()[i].delete(10);
+                    await msgs.array()[i].delete(100);
                 })();
         })
         .catch(console.error);
