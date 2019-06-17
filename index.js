@@ -58,7 +58,6 @@ client.on('ready', () => {
 //Discord Listner:
 client.on('message', msg => {
     if(msg.channel.name === channel){
-        console.log(msg);
         //Check if PROHIBITED words were used:
         for(let i = 0; i < stop.length; ++i){
             if(msg.content.includes(stop[i])){
@@ -98,7 +97,10 @@ var actions = [
         .then(msgs => {
             console.log(`Purged ${msgs.size} messages`);
             if(user)
-                msgs = msgs.filter( e => e.author);
+                msgs = msgs.filter( e => {
+                    console.log(e.author + " " + user);
+                    return e.author == user
+                });
             console.log(`Purged ${msgs.size} messages`);
             for(let i = 0; i < msgs.size; ++i)
                 (async () => {
