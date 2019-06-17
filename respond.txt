@@ -1,0 +1,5 @@
+!hi Hello!
+!more Less!
+!ping Pong!
+!bye Goodbye!
+
