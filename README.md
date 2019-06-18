@@ -6,7 +6,7 @@ Currently a Discord Bot, will be inplementing Twitch communication in the near f
 Requirements:
 Install Node JS: https://www.guru99.com/download-install-node-js.html
 
-Used Modules:
+Used External Modules:
   "fs" filesystem to access read/writing to files (for reading/writing to our resources on disk)
   "discord.js" discords api to accessing the controlling the bot
 
