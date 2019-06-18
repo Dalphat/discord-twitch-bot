@@ -12,18 +12,20 @@ const client = new Discord.Client();//Create an instance of a Discord Client.
 var stop = [];
 var respond = new Map();
 var channel = [];
+var map = new Map([
+    ['!purge',func.purge],
+    ['!add',(msg,arr)=>func.add(msg, arr, fs, respond)],
+    ['!rem',(msg,arr)=>func.rem(msg, arr, fs, respond)],
+]);
 
 //Populate Prohibited words from 'stop.txt'
 fs.readFile('stop.txt', (err, data) => func.stop(err,data,stop));
 //Populate Response words from 'respond.txt'
 fs.readFile('respond.txt', (err,data) => func.respond(err,data,respond));
-
 //Read channels from file to enable bot access to particular channels.
 fs.readFile('channel.txt', (err, data) => func.channel(err,data,channel));
-
 //Read token from file to enable logging bot client.
 fs.readFile('token.txt', (err, data) => func.login(err,data,client));
-
 //Print to console when the bot successfully logs:
 client.on('ready', () => console.log(`Logged in as ${client.user.tag}!`));
 
@@ -42,18 +44,8 @@ client.on('message', msg => {
             }
             //Split the long string to individual words:
             let arr = msg.content.split(' ');//delimited by WHITESPACE
-            if(react.has(arr[0])){
-                switch(arr.length){
-                    case 2:
-                        react.get(arr[0])(msg,arr[1],null);
-                        break;
-                    case 3:
-                        react.get(arr[0])(msg,arr[1],arr[2]);
-                        break;
-                    default:
-                        msg.reply('Invalid command');
-                        break;
-                }
+            if(map.has(arr[0])){
+                map.get(arr[0])(msg,arr);
             }else if(respond.has(arr[0])){
                 msg.reply(respond.get(arr[0]));
                 console.log(respond.get(arr[0]))
@@ -61,53 +53,3 @@ client.on('message', msg => {
         }
     }
 });
-//Commands Array:
-var commands = [
-    '!purge',
-    '!add',
-    '!remove'
-];
-//Actions Array:
-var actions = [
-    (msg,count,user)=>{
-        msg.channel.fetchMessages({limit:++count})
-        .then(msgs => {
-            console.log(`Purged ${msgs.size} messages`);
-            if(user)
-                msgs = msgs.filter( e => {
-                    console.log(e.author + " " + user);
-                    return e.author == user
-                });
-            console.log(`Purged ${msgs.size} messages`);
-            for(let i = 0; i < msgs.size; ++i)
-                (async () => {
-                    await msgs.array()[i].delete(100);
-                })();
-        })
-        .catch(console.error);
-    },
-    (msg,key,value)=>{
-        console.log(key + ' ' + value);
-        if(key && value){
-            key = key.replace(/[\n\r]/g,'');
-            value = value.replace(/[\n\r]/g,'');
-            if(key.length > 0 && value.length > 0){
-                key = '!' + key;
-                console.log(key + ' ' + value);
-                respond.set(key,value);
-                fs.appendFile('respond.txt', key + ' ' + value + '\n', (err)=>{
-                    if(err)
-                        console.log("Invalid response command!");
-                    console.log('Successfully added: '+key+' '+value);
-                    msg.channel.send('Successfully added: '+key+' '+value);
-                });
-            }
-        }
-    },
-];
-//Reaction Map:
-var react = new Map([
-    [commands[0], actions[0]],
-    [commands[1], actions[1]],
-    [commands[2], actions[2]],
-]);
