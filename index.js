@@ -5,90 +5,67 @@
 */
 const Discord = require('discord.js');//Discord: use to make operations with Discord.
 const fs = require('fs');//FileSystem: use to read the token password from textfile.
+const func = require('./function');
 
 const client = new Discord.Client();//Create an instance of a Discord Client.
 
 var stop = [];
 var respond = new Map();
-var channel = 'bot-channel';//Change this to join different channels in the server.
+var channel = [];
 
 //Populate Prohibited words from 'stop.txt'
-fs.readFile('stop.txt', (err, data) => {
-    if (err)
-        throw err;
-    console.log("Reading 'stop.txt'");
-    let lines = data.toString().split('\n');
-    for(let i = 0; i < lines.length; ++i){
-        lines[i] = lines[i].replace(/[\n\r]/g,'');
-        if(lines[i].length > 0){
-            stop.push(lines[i]);
-            console.log(lines[i]);
-        }
-    }
-});
+fs.readFile('stop.txt', (err, data) => func.stop(err,data,stop));
 //Populate Response words from 'respond.txt'
-fs.readFile('respond.txt', (err,data) => {
-    if (err)
-        throw err;
-    console.log("Reading 'respond.txt'");
-    let lines = data.toString().split('\n');
-    for(let i = 0; i < lines.length; ++i){
-        lines[i] = lines[i].replace(/[\n\r]/g,'');
-        let index = lines[i].indexOf(' ');
-        if(index > 0){
-            lines[i] = lines[i].replace(' ','');
-            let first = lines[i].substr(0,index);
-            let second = lines[i].substr(index,lines[i].length - (index + 1));
-            respond.set(first,second);
-            console.log('Respond: [' + first + ', ' + second +']');
-        }
-    }
-});
-//Read token from file and ues it to log into bot.
-fs.readFile('token.txt', (err, data) => {
-    if (err)
-        throw err;
-    client.login(data.toString());
-});
+fs.readFile('respond.txt', (err,data) => func.respond(err,data,respond));
+
+//Read channels from file to enable bot access to particular channels.
+fs.readFile('channel.txt', (err, data) => func.channel(err,data,channel));
+
+//Read token from file to enable logging bot client.
+fs.readFile('token.txt', (err, data) => func.login(err,data,client));
 
 //Print to console when the bot successfully logs:
-client.on('ready', () => {
-    console.log(`Logged in as ${client.user.tag}!`);
-});
+client.on('ready', () => console.log(`Logged in as ${client.user.tag}!`));
+
 //Discord Listner:
 client.on('message', msg => {
-    if(msg.channel.name === channel){
+    if(channel.indexOf(msg.channel.name) != -1){
         //Check if PROHIBITED words were used:
-        for(let i = 0; i < stop.length; ++i){
-            if(msg.content.includes(stop[i])){
-                //TODO: EDIT post instead of deleting it.
-                msg.delete();//Delete the message immediately.
-                msg.reply("Nope, not going to happen!");
-                return;
+        if(!msg.author.bot){
+            for(let i = 0; i < stop.length; ++i){
+                if(msg.content.includes(stop[i])){
+                    //TODO: EDIT post instead of deleting it.
+                    msg.delete();//Delete the message immediately.
+                    msg.reply(`Your message deleted! \nReason: Usage of banned word: || ${stop[i]} ||`);
+                    return;
+                }
             }
-        }
-        //Split the long string to individual words:
-        let arr = msg.content.split(' ');//delimited by WHITESPACE
-        if(react.has(arr[0])){
-            switch(arr.length){
-                case 2:
-                    react.get(arr[0])(msg,arr[1],null);
-                    break;
-                case 3:
-                    react.get(arr[0])(msg,arr[1],arr[2]);
-                    break;
-                default:
-                    msg.reply('Invalid command');
+            //Split the long string to individual words:
+            let arr = msg.content.split(' ');//delimited by WHITESPACE
+            if(react.has(arr[0])){
+                switch(arr.length){
+                    case 2:
+                        react.get(arr[0])(msg,arr[1],null);
+                        break;
+                    case 3:
+                        react.get(arr[0])(msg,arr[1],arr[2]);
+                        break;
+                    default:
+                        msg.reply('Invalid command');
+                        break;
+                }
+            }else if(respond.has(arr[0])){
+                msg.reply(respond.get(arr[0]));
+                console.log(respond.get(arr[0]))
             }
-        }else if(respond.has(arr[0])){
-            msg.reply(respond.get(arr[0]));
-            console.log(respond.get(arr[0]))
         }
     }
 });
 //Commands Array:
 var commands = [
     '!purge',
+    '!add',
+    '!remove'
 ];
 //Actions Array:
 var actions = [
@@ -109,8 +86,28 @@ var actions = [
         })
         .catch(console.error);
     },
+    (msg,key,value)=>{
+        console.log(key + ' ' + value);
+        if(key && value){
+            key = key.replace(/[\n\r]/g,'');
+            value = value.replace(/[\n\r]/g,'');
+            if(key.length > 0 && value.length > 0){
+                key = '!' + key;
+                console.log(key + ' ' + value);
+                respond.set(key,value);
+                fs.appendFile('respond.txt', key + ' ' + value + '\n', (err)=>{
+                    if(err)
+                        console.log("Invalid response command!");
+                    console.log('Successfully added: '+key+' '+value);
+                    msg.channel.send('Successfully added: '+key+' '+value);
+                });
+            }
+        }
+    },
 ];
 //Reaction Map:
 var react = new Map([
     [commands[0], actions[0]],
+    [commands[1], actions[1]],
+    [commands[2], actions[2]],
 ]);
